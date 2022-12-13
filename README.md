@@ -5,10 +5,8 @@ This script notifies you by email when new version of [nearcore](https://github.
 ## How to use
 
 ```bash
-$ export SMTP_SERVER="smtp.google.com"
-$ export EMAIL_RECIPIENT="<your-email-here>"
-$ export EMAIL_HOSTNAME="<hostname-for-smtp>"
-$ export EMAIL_PASSWORD="<password-for-smtp>"
+$ export TELEGRAM_BOT_API="<YOUR-TELEGRAM-BOT-API>"
+$ export TELEGRAM_CHAT_ID="<YOUR-TELEGRAM-CHAT-ID>"
 
 $ cargo run --release
 ```
