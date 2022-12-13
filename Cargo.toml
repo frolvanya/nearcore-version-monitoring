@@ -10,7 +10,7 @@ json = "0.12.4"
 regex = "1.7.0"
 anyhow = "1.0.66"
 
-reqwest = "0.11.13"
+reqwest = { version = "0.11.13", features = ["json"] }
 tokio = { version = "1.23.0", features = ["macros", "rt-multi-thread"] }
 
 lettre = "0.9"

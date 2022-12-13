@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 
@@ -5,21 +6,15 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use reqwest::header::USER_AGENT;
 
-use lettre::smtp::authentication::Credentials;
-use lettre::{SmtpClient, Transport};
-use lettre_email::EmailBuilder;
-
 use tokio::time::{sleep, Duration};
 
-struct EmailData<'a> {
-    smtp: &'a str,
-    recipient: &'a str,
-    hostname: &'a str,
-    password: &'a str,
-    message: &'a str,
+struct TelegramData {
+    api: String,
+    chat_id: String,
+    message: String,
 }
 
-async fn get_new_version(url: &str, new_version: &mut String) -> Result<()> {
+async fn get_new_version(url: &str) -> Result<String> {
     let client = reqwest::Client::new();
 
     for _ in 0..10 {
@@ -40,70 +35,45 @@ async fn get_new_version(url: &str, new_version: &mut String) -> Result<()> {
         .context("Failed to parse response text as a json")?;
         match response_json["name"].as_str() {
             Some(version) => {
-                new_version.push_str(version.trim());
-                break;
+                return Ok(version.trim().to_string());
             }
             None => {
-                new_version.clear();
                 sleep(Duration::from_secs(5)).await;
             }
         }
     }
 
-    if new_version.is_empty() {
-        return Err(anyhow::anyhow!("New version is None value"));
-    }
-
-    Ok(())
+    Err(anyhow::anyhow!("Couldn't get last version"))
 }
 
 fn get_prev_version() -> Result<String> {
-    fs::read_to_string("version.txt")
-        .context("Failed to read from file")?
-        .parse::<String>()
-        .context("Failed to parse file content")
+    fs::read_to_string("version.txt").context("Failed to read from file")
 }
 
-fn notify(email_data: &EmailData) -> Result<()> {
-    let email = EmailBuilder::new()
-        .to(email_data.recipient)
-        .from(email_data.hostname)
-        .subject("New version of Nearcore just came")
-        .text(email_data.message)
-        .build()
-        .context("Failed to build email")?;
+async fn notify(tg_data: &TelegramData) -> Result<()> {
+    let client = reqwest::Client::new();
 
-    let mut mailer = SmtpClient::new_simple(email_data.smtp)
-        .context("Failed to create new SMTP client")?
-        .credentials(Credentials::new(
-            email_data.hostname.to_string(),
-            email_data.password.to_string(),
+    let mut request_data = HashMap::new();
+    request_data.insert("chat_id", tg_data.chat_id.clone());
+    request_data.insert("text", tg_data.message.clone());
+
+    client
+        .post(format!(
+            "https://api.telegram.org/bot{}/sendMessage",
+            tg_data.api
         ))
-        .transport();
-
-    mailer.send(email.into()).context("Failed to send email")?;
+        .json(&request_data)
+        .send()
+        .await
+        .context("Failed to send telegram message")?;
 
     Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let smtp_server = env::var_os("SMTP_SERVER").unwrap_or_else(|| {
-        println!("Set up `SMTP_SERVER` first");
-        std::process::exit(1);
-    });
-    let email_recipient = env::var_os("EMAIL_RECIPIENT").unwrap_or_else(|| {
-        println!("Set up `EMAIL_RECIPIENT` first");
-        std::process::exit(1);
-    });
-    let email_hostname = env::var_os("EMAIL_HOSTNAME").unwrap_or_else(|| {
-        println!("Set up `EMAIL_HOSTNAME` first");
-        std::process::exit(1);
-    });
-    let email_password = env::var_os("EMAIL_PASSWORD").unwrap_or_else(|| {
-        println!("Set up `EMAIL_PASSWORD` first");
-        std::process::exit(1);
-    });
+    let api = env::var("TELEGRAM_BOT_API").context("Set up `TELEGRAM_BOT_API` first")?;
+    let chat_id = env::var("TELEGRAM_CHAT_ID").context("Set up `TELEGRAM_CHAT_ID` first")?;
 
     let url = "https://api.github.com/repos/near/nearcore/releases/latest";
     let release_version_regex = Regex::new(r"^\d+\.\d+\.\d+$").context("Failed to create regex")?;
@@ -112,31 +82,20 @@ async fn main() -> Result<()> {
         fs::File::create("version.txt").context("Failed to create version.txt")?;
     }
 
-    let mut new_version = String::new();
-    get_new_version(url, &mut new_version).await?;
+    let new_version = get_new_version(url).await?;
 
     if release_version_regex.is_match(&new_version) && new_version != get_prev_version()? {
         fs::write("version.txt", new_version.as_bytes()).context("Failed to rewrite file")?;
 
-        notify(&EmailData {
-            smtp: smtp_server
-                .to_str()
-                .context("Failed to unwrap `smpt_server`")?,
-            recipient: email_recipient
-                .to_str()
-                .context("Failed to unwrap `email_recipient`")?,
-            hostname: email_hostname
-                .to_str()
-                .context("Failed to unwrap `email_hostname`")?,
-            password: email_password
-                .to_str()
-                .context("Failed to unwrap `email_password`")?,
+        notify(&TelegramData {
+            api,
+            chat_id,
             message: format!(
-                "https://github.com/near/nearcore/releases/tag/{}",
+                "New version of Nearcore just came out!\n\nhttps://github.com/near/nearcore/releases/tag/{}",
                 new_version
-            )
-            .as_str(),
-        })?;
+            ),
+        })
+        .await?;
     }
 
     Ok(())
