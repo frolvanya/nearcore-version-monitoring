@@ -113,6 +113,10 @@ async fn main() -> Result<()> {
     let url = "https://api.github.com/repos/near/nearcore/releases/latest";
     let release_version_regex = Regex::new(r"^\d+\.\d+\.\d+$").context("Failed to create regex")?;
 
+    if !std::path::Path::exists(&std::path::Path::new("version.txt")) {
+        File::create("version.txt").context("Failed to create version.txt")?;
+    }
+
     let mut new_version = String::new();
     get_new_version(url, &mut new_version).await?;
 
