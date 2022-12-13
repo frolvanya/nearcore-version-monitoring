@@ -1,0 +1,17 @@
+[package]
+name = "nearcore-new-release"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+json = "0.12.4"
+regex = "1.7.0"
+anyhow = "1.0.66"
+
+reqwest = "0.11.13"
+tokio = { version = "1.23.0", features = ["macros", "rt-multi-thread"] }
+
+lettre = "0.9"
+lettre_email = "0.9"
