@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install cron -y
 COPY crontab.txt /opt
 RUN crontab /opt/crontab.txt
 
-# create an entrypoing
+# create an entrypoint
 COPY ./entrypoint.sh ./entrypoint.sh
 ENTRYPOINT ["bash", "entrypoint.sh"]
 
