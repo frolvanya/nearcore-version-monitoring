@@ -1,6 +1,5 @@
 use std::env;
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
+use std::fs;
 
 use anyhow::{Context, Result};
 use regex::Regex;
@@ -59,14 +58,10 @@ async fn get_new_version(url: &str, new_version: &mut String) -> Result<()> {
 }
 
 fn get_prev_version() -> Result<String> {
-    let mut versions_file = File::open("version.txt").context("Failed to open file")?;
-    let mut buffer = String::new();
-
-    versions_file
-        .read_to_string(&mut buffer)
-        .context("Failed to read from file")?;
-
-    Ok(buffer)
+    fs::read_to_string("version.txt")
+        .context("Failed to read from file")?
+        .parse::<String>()
+        .context("Failed to parse file content")
 }
 
 fn notify(email_data: &EmailData) -> Result<()> {
@@ -113,21 +108,15 @@ async fn main() -> Result<()> {
     let url = "https://api.github.com/repos/near/nearcore/releases/latest";
     let release_version_regex = Regex::new(r"^\d+\.\d+\.\d+$").context("Failed to create regex")?;
 
-    if !std::path::Path::exists(&std::path::Path::new("version.txt")) {
-        File::create("version.txt").context("Failed to create version.txt")?;
+    if !std::path::Path::exists(std::path::Path::new("version.txt")) {
+        fs::File::create("version.txt").context("Failed to create version.txt")?;
     }
 
     let mut new_version = String::new();
     get_new_version(url, &mut new_version).await?;
 
     if release_version_regex.is_match(&new_version) && new_version != get_prev_version()? {
-        let mut versions_file = OpenOptions::new()
-            .write(true)
-            .open("version.txt")
-            .context("Failed to open file for writing")?;
-        versions_file
-            .write(new_version.as_bytes())
-            .context("Failed to rewrite file")?;
+        fs::write("version.txt", new_version.as_bytes()).context("Failed to rewrite file")?;
 
         notify(&EmailData {
             smtp: smtp_server
