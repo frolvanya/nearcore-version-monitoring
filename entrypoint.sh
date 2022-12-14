@@ -1,2 +1,2 @@
 printenv | grep "TELEGRAM*" >> /etc/environment
-cron -f
+crond -f

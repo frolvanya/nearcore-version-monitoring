@@ -1,36 +1,42 @@
-FROM ekidd/rust-musl-builder as builder
+FROM frolvlad/alpine-rust as builder
+
+RUN apk add --no-cache openssl-dev
 
 # create a new empty shell project
-WORKDIR /usr/bin/local/
-RUN cargo new --bin nearcore-new-release
-WORKDIR nearcore-new-release
+WORKDIR /nearcore-new-release
 
 # copy over manifests
 COPY Cargo.toml .
+COPY Cargo.lock .
+
+RUN mkdir src
+RUN touch src/main.rs
+RUN echo "fn main() {}" > src/main.rs
 
 RUN cargo test
 RUN cargo build --release
 
 COPY . .
-RUN sudo touch src/main.rs
+RUN touch src/main.rs
 
 RUN cargo test
 RUN cargo build --release
 
-RUN strip target/x86_64-unknown-linux-musl/release/nearcore-new-release
+RUN strip target/release/nearcore-new-release
 
-# Start building the final image
-FROM scratch
-WORKDIR /home/nvm/
-COPY --from=builder /home/rust/target/x86_64-unknown-linux-musl/release/nearcore-new-release .
+# start building the final image
+FROM alpine:3.17
 
-# installing cron
-RUN apt-get update && apt-get install cron -y
+RUN apk add --no-cache bash libssl3 libgcc
+
+COPY --from=builder /nearcore-new-release/target/release/nearcore-new-release .
 
 # configure cron
 COPY crontab.txt /opt
-RUN crontab /opt/crontab.txt
+RUN /usr/bin/crontab /opt/crontab.txt
 
 # create an entrypoint
-COPY ./entrypoint.sh ./entrypoint.sh
-ENTRYPOINT ["bash", "entrypoint.sh"]
+COPY ./entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["bash", "/entrypoint.sh"]

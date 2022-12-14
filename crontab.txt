@@ -1,2 +1,2 @@
-* * * * * /nearcore-new-release >> /logs.txt
+* * * * * /nvm/nearcore-new-release >> /var/log/nvm.log
 
