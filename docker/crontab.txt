@@ -1,2 +1,0 @@
-* * * * * /nearcore-new-release >> /logs.txt
-
