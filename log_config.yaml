@@ -1,0 +1,22 @@
+appenders:
+  stdout:
+    kind: console
+    encoder:
+      pattern: "{h([{d(%d-%m-%Y %H:%M:%S)(utc)} - {l}] {m}{n})}"
+  fout:
+    kind: rolling_file
+    path: "log/nvm.log"
+    encoder:
+      pattern: "{h([{d(%d-%m-%Y %H:%M:%S)(utc)} - {l}] {m}{n})}"
+    policy:
+      trigger:
+        kind: size
+        limit: 50kb
+      roller:
+        kind: delete
+root:
+  level: debug
+  appenders:
+    - stdout
+    - fout
+

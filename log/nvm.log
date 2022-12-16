@@ -1,0 +1,6 @@
+[16-12-2022 19:53:45 - INFO] Created version.txt file
+[16-12-2022 19:53:45 - DEBUG] starting new connection: https://api.github.com/
+[16-12-2022 19:53:46 - INFO] New release version detected
+[16-12-2022 19:53:46 - INFO] Updated version.txt
+[16-12-2022 19:53:46 - DEBUG] starting new connection: https://api.telegram.org/
+[16-12-2022 19:53:46 - INFO] Successfully sent telegram message

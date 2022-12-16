@@ -8,6 +8,9 @@ use reqwest::header::USER_AGENT;
 
 use tokio::time::{sleep, Duration};
 
+use log::{info, warn};
+use log4rs;
+
 struct TelegramData {
     api: String,
     chat_id: String,
@@ -43,6 +46,7 @@ async fn get_new_version(url: &str) -> Result<String> {
         }
     }
 
+    warn!("Couldn't get last version");
     Err(anyhow::anyhow!("Couldn't get last version"))
 }
 
@@ -72,6 +76,9 @@ async fn notify(tg_data: &TelegramData) -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    log4rs::init_file("log_config.yaml", Default::default())
+        .context("Failed to load config for logging file")?;
+
     let api = env::var("TELEGRAM_BOT_API").context("Set up `TELEGRAM_BOT_API` first")?;
     let chat_id = env::var("TELEGRAM_CHAT_ID").context("Set up `TELEGRAM_CHAT_ID` first")?;
 
@@ -80,12 +87,16 @@ async fn main() -> Result<()> {
 
     if !std::path::Path::exists(std::path::Path::new("version.txt")) {
         fs::File::create("version.txt").context("Failed to create version.txt")?;
+        info!("Created version.txt file");
     }
 
     let new_version = get_new_version(url).await?;
 
     if release_version_regex.is_match(&new_version) && new_version != get_prev_version()? {
+        info!("New release version detected");
+
         fs::write("version.txt", new_version.as_bytes()).context("Failed to rewrite file")?;
+        info!("Updated version.txt");
 
         notify(&TelegramData {
             api,
@@ -96,6 +107,7 @@ async fn main() -> Result<()> {
             ),
         })
         .await?;
+        info!("Successfully sent telegram message");
     }
 
     Ok(())
