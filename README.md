@@ -1,6 +1,6 @@
 ## General info
 
-This script notifies you by email when new version of [nearcore](https://github.com/near/nearcore) comes out 
+This script notifies you by telegram when new version of [nearcore](https://github.com/near/nearcore) comes out 
 
 ## How to use
 
